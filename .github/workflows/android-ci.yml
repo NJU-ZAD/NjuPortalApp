@@ -34,3 +34,9 @@ jobs:
         with:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+      - name: Create GitHub Release and Upload APK
+        if: github.ref_type == 'tag'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" app/build/outputs/apk/debug/*.apk --title "Release $GITHUB_REF_NAME" --notes "自动发布"
