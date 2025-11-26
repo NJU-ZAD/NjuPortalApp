@@ -22,13 +22,18 @@ import okhttp3.Request
 class MainActivity : AppCompatActivity() {
     // 检查数据流量是否开启（移动网络是否连接）
     private fun isMobileDataEnabled(): Boolean {
-        val cm =
-                getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
-                        ?: return false
-        val activeNetwork = cm.activeNetworkInfo
-        return activeNetwork != null &&
-                activeNetwork.type == android.net.ConnectivityManager.TYPE_MOBILE &&
-                activeNetwork.isConnected
+        return try {
+            val cm =
+                    getSystemService(Context.CONNECTIVITY_SERVICE) as?
+                            android.net.ConnectivityManager
+                            ?: return false
+            val activeNetwork = cm.activeNetworkInfo
+            activeNetwork != null &&
+                    activeNetwork.type == android.net.ConnectivityManager.TYPE_MOBILE &&
+                    activeNetwork.isConnected
+        } catch (e: Exception) {
+            false
+        }
     }
     // 新增：Wi-Fi状态变化监听器
     private val wifiStateReceiver =
@@ -336,7 +341,6 @@ class MainActivity : AppCompatActivity() {
 
         // 只有在用户名和密码未保存时，强制检测数据流量
         if (!hasValidCredentials() && isMobileDataEnabled()) {
-            btnLogin.isEnabled = false
             showStatus("检测到数据流量已开启，请关闭数据流量后再登录校园网。")
             Toast.makeText(this, "请关闭数据流量，否则认证可能失败。", Toast.LENGTH_LONG).show()
             return
