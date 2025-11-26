@@ -132,7 +132,7 @@ object PortalClient {
             // 返回不是 JSON，就粗略判断一下
             if (resp.isBlank()) {
                 // 网络代理或其他异常导致 resp 为空
-                false to "网络返回为空，可能是代理导致，请关闭代理服务器后重试"
+                false to "网络认证异常，可能是代理导致，请关闭代理后重试"
             } else if (resp.contains("成功")) {
                 true to resp
             } else {
