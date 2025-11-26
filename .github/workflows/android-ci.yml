@@ -36,9 +36,25 @@ jobs:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           
-      - name: Create GitHub Release and Upload APK
+      - name: Create GitHub Release
         if: github.ref_type == 'tag'
+        id: create_release
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "$GITHUB_REF_NAME" app/build/outputs/apk/debug/*.apk --title "NJU Portal $GITHUB_REF_NAME"
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: NJU Portal ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: Upload APK to Release
+        if: github.ref_type == 'tag'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/debug/app-debug.apk
+          asset_name: app-debug.apk
+          asset_content_type: application/vnd.android.package-archive
