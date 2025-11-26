@@ -22,15 +22,18 @@ import okhttp3.Request
 class MainActivity : AppCompatActivity() {
     // 检查数据流量是否开启（移动网络是否连接）
     private fun isMobileDataEnabled(): Boolean {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager ?: return false
         return try {
-            val cm =
-                    getSystemService(Context.CONNECTIVITY_SERVICE) as?
-                            android.net.ConnectivityManager
-                            ?: return false
-            val activeNetwork = cm.activeNetworkInfo
-            activeNetwork != null &&
-                    activeNetwork.type == android.net.ConnectivityManager.TYPE_MOBILE &&
-                    activeNetwork.isConnected
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                val network = cm.activeNetwork ?: return false
+                val nc = cm.getNetworkCapabilities(network) ?: return false
+                nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)
+            } else {
+                val activeNetwork = cm.activeNetworkInfo
+                activeNetwork != null &&
+                        activeNetwork.type == android.net.ConnectivityManager.TYPE_MOBILE &&
+                        activeNetwork.isConnected
+            }
         } catch (e: Exception) {
             false
         }
@@ -379,6 +382,17 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 btnLogin.isEnabled = true
                 showStatus(msg)
+
+                val proxyErrorMsg = "网络返回为空，可能是代理导致，请关闭代理服务器后重试"
+                if (!success && msg == proxyErrorMsg) {
+                    AlertDialog.Builder(this)
+                        .setTitle("网络异常")
+                        .setMessage("检测到网络异常，可能是代理服务器导致。请关闭代理后重试。")
+                        .setPositiveButton("确定", null)
+                        .show()
+                    setCredentialsEditable(true)
+                    return@runOnUiThread
+                }
 
                 if (success) {
                     Prefs.saveCredentials(this, username, password)
