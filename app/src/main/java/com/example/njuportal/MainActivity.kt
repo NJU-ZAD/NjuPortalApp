@@ -109,7 +109,16 @@ class MainActivity : AppCompatActivity() {
 
         ensurePermissions()
 
-        btnLogin.setOnClickListener { doLogin(auto = false) }
+        btnLogin.setOnClickListener {
+            // 只有在用户名和密码未保存时，点击登录按钮时实时检查数据流量
+            if (!hasValidCredentials() && isMobileDataEnabled()) {
+                showStatus("检测到数据流量已开启，请关闭数据流量后再登录校园网。")
+                Toast.makeText(this, "请关闭数据流量，否则认证可能失败。", Toast.LENGTH_LONG).show()
+                // 阻止登录流程
+                return@setOnClickListener
+            }
+            doLogin(auto = false)
+        }
 
         btnLogout.setOnClickListener { doLogout() }
 
@@ -341,13 +350,6 @@ class MainActivity : AppCompatActivity() {
     private fun doLogin(auto: Boolean) {
         val ssid = getCurrentSsid()
         val canCheckWifi = hasLocationPermission() && ssid != null
-
-        // 只有在用户名和密码未保存时，强制检测数据流量
-        if (!hasValidCredentials() && isMobileDataEnabled()) {
-            showStatus("检测到数据流量已开启，请关闭数据流量后再登录校园网。")
-            Toast.makeText(this, "请关闭数据流量，否则认证可能失败。", Toast.LENGTH_LONG).show()
-            return
-        }
 
         // 能确定 SSID 且不是 NJU-WLAN → 拦截
         if (canCheckWifi && ssid != "NJU-WLAN") {
