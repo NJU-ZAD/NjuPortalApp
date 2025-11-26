@@ -188,8 +188,8 @@ class MainActivity : AppCompatActivity() {
     // 3. 登录逻辑（增加 Wi-Fi 检查）
     // ─────────────────────────────
     private fun doLogin(auto: Boolean) {
-        // ①先强制检查 Wi-Fi：不是 NJU-WLAN 直接禁止
-        if (!isOnCampusWifi()) {
+        // ① 如果有定位权限，并且检测到不是 NJU-WLAN → 拦截
+        if (hasLocationPermission() && !isOnCampusWifi()) {
             btnLogin.isEnabled = true
             txtStatus.text = "当前未连接 NJU-WLAN，无法认证。请先连接校园网。"
             if (!auto) {
@@ -197,6 +197,11 @@ class MainActivity : AppCompatActivity() {
                 showWifiHintDialog()
             }
             return
+        }
+
+        // ② 如果没有定位权限：不强制拦截，只给个提醒
+        if (!hasLocationPermission()) {
+            txtStatus.text = "无法检测是否在 NJU-WLAN，下次可考虑授予位置权限。请确认已连上校园网后再登录。"
         }
 
         val username = editUsername.text.toString().trim()
@@ -239,18 +244,22 @@ class MainActivity : AppCompatActivity() {
     // 4. 退出登录（增加 Wi-Fi + 凭据检查）
     // ─────────────────────────────
     private fun doLogout() {
-        // A. 如果没在 NJU-WLAN 下，直接不做任何请求
-        if (!isOnCampusWifi()) {
+        // A. 有定位权限 + 检测到不是 NJU-WLAN → 不执行退出
+        if (hasLocationPermission() && !isOnCampusWifi()) {
             txtStatus.text = "当前未连接 NJU-WLAN，无法退出登录。"
             Toast.makeText(this, "请在 NJU-WLAN 下再执行退出登录。", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // B. 如果本地没有存储的账号密码，也不执行
+        // B. 如果没有定位权限：不拦截，只提醒一句
+        if (!hasLocationPermission()) {
+            txtStatus.text = "无法检测是否在 NJU-WLAN，将直接尝试退出登录，请确认已连上校园网。"
+        }
+
+        // C. 如果本地没有存储的账号密码，也不执行
         val (savedUser, savedPass) = Prefs.loadCredentials(this)
         if (savedUser.isNullOrEmpty() || savedPass.isNullOrEmpty()) {
             txtStatus.text = "未发现已保存的账号信息，无需退出。"
-            // 这里不弹 toast 也可以，只给个状态提示
             return
         }
 
