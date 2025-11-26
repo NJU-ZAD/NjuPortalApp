@@ -366,8 +366,16 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, if (auto) "自动认证成功！" else "认证成功！", Toast.LENGTH_LONG).show()
                 } else {
                     if (auto) {
-                        // 自动登录失败 → 直接引导用户确认 Wi-Fi 后手动登录
-                        txtStatus.text = "自动认证失败：$msg\n\n" + "请确认已连接 NJU-WLAN 后，手动点击“登录校园网”。"
+                        val ssid = getCurrentSsid()
+                        val canCheckWifi = hasLocationPermission() && ssid != null
+                        if (!canCheckWifi) {
+                            // 无法检测Wi-Fi时，自动认证失败只提示用户自行确认Wi-Fi，并说明原因
+                            val reason = getWifiDetectionReason()
+                            txtStatus.text = reason + "\n请确认已连接 NJU-WLAN 后，手动点击“登录校园网”。"
+                        } else {
+                            // 能检测Wi-Fi时，仍显示具体失败消息
+                            txtStatus.text = "自动认证失败：$msg\n\n" + "请确认已连接 NJU-WLAN 后，手动点击“登录校园网”。"
+                        }
                     } else {
                         setCredentialsEditable(true)
                         Toast.makeText(this, "认证失败：$msg", Toast.LENGTH_LONG).show()
