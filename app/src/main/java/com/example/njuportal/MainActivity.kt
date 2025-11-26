@@ -376,9 +376,14 @@ class MainActivity : AppCompatActivity() {
 
                 // 新增：捕捉数据流量导致的认证失败
                 if (!success && msg.contains(mobileDataErrorMsg) && ssid == "NJU-WLAN") {
-                    showStatus("检测到数据流量未关闭，请关闭数据流量后再登录校园网。")
+                    showStatus("请关闭数据流量后再登录校园网。")
                     Toast.makeText(this, "请关闭数据流量，否则认证可能失败。", Toast.LENGTH_LONG).show()
-                    openWifiPanel()
+                    AlertDialog.Builder(this)
+                        .setTitle("关闭数据流量")
+                        .setMessage("检测到数据流量已开启，请关闭数据流量后再登录。点击“去关闭”打开网络设置。")
+                        .setPositiveButton("去关闭") { _, _ -> openWifiPanel() }
+                        .setNegativeButton("取消", null)
+                        .show()
                     setCredentialsEditable(true)
                     return@runOnUiThread
                 }
