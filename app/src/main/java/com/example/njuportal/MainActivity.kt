@@ -20,24 +20,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 class MainActivity : AppCompatActivity() {
-    // 检查数据流量是否开启（移动网络是否连接）
-    private fun isMobileDataEnabled(): Boolean {
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager ?: return false
-        return try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                val network = cm.activeNetwork ?: return false
-                val nc = cm.getNetworkCapabilities(network) ?: return false
-                nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)
-            } else {
-                val activeNetwork = cm.activeNetworkInfo
-                activeNetwork != null &&
-                        activeNetwork.type == android.net.ConnectivityManager.TYPE_MOBILE &&
-                        activeNetwork.isConnected
-            }
-        } catch (e: Exception) {
-            false
-        }
-    }
     // 新增：Wi-Fi状态变化监听器
     private val wifiStateReceiver =
             object : android.content.BroadcastReceiver() {
@@ -110,13 +92,6 @@ class MainActivity : AppCompatActivity() {
         ensurePermissions()
 
         btnLogin.setOnClickListener {
-            // 只有在用户名和密码未保存时，点击登录按钮时实时检查数据流量
-            if (!hasValidCredentials() && isMobileDataEnabled()) {
-                showStatus("检测到数据流量已开启，请关闭数据流量后再登录校园网。")
-                Toast.makeText(this, "请关闭数据流量，否则认证可能失败。", Toast.LENGTH_LONG).show()
-                // 阻止登录流程
-                return@setOnClickListener
-            }
             doLogin(auto = false)
         }
 
@@ -386,12 +361,24 @@ class MainActivity : AppCompatActivity() {
                 showStatus(msg)
 
                 val proxyErrorMsg = "网络返回为空，可能是代理导致，请关闭代理服务器后重试"
+                val mobileDataErrorMsg = "Unable to resolve host \"p2.nju.edu.cn\": No address associated with hostname"
+                val ssid = getCurrentSsid()
+
                 if (!success && msg == proxyErrorMsg) {
                     AlertDialog.Builder(this)
                         .setTitle("网络异常")
                         .setMessage("检测到网络异常，可能是代理服务器导致。请关闭代理后重试。")
                         .setPositiveButton("确定", null)
                         .show()
+                    setCredentialsEditable(true)
+                    return@runOnUiThread
+                }
+
+                // 新增：捕捉数据流量导致的认证失败
+                if (!success && msg.contains(mobileDataErrorMsg) && ssid == "NJU-WLAN") {
+                    showStatus("检测到数据流量未关闭，请关闭数据流量后再登录校园网。")
+                    Toast.makeText(this, "请关闭数据流量，否则认证可能失败。", Toast.LENGTH_LONG).show()
+                    openWifiPanel()
                     setCredentialsEditable(true)
                     return@runOnUiThread
                 }
@@ -404,7 +391,6 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, if (auto) "自动认证成功！" else "认证成功！", Toast.LENGTH_LONG).show()
                 } else {
                     if (auto) {
-                        val ssid = getCurrentSsid()
                         val canCheckWifi = hasLocationPermission() && ssid != null
                         if (!canCheckWifi) {
                             // 无法检测Wi-Fi时，自动认证失败只提示用户自行确认Wi-Fi，并说明原因
