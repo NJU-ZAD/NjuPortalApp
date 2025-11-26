@@ -20,6 +20,22 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 class MainActivity : AppCompatActivity() {
+    // 新增：Wi-Fi状态变化监听器
+    private val wifiStateReceiver =
+            object : android.content.BroadcastReceiver() {
+                override fun onReceive(context: Context?, intent: android.content.Intent?) {
+                    val action = intent?.action
+                    if (action == android.net.wifi.WifiManager.NETWORK_STATE_CHANGED_ACTION ||
+                                    action == android.net.ConnectivityManager.CONNECTIVITY_ACTION
+                    ) {
+                        val ssid = getCurrentSsid()
+                        if (ssid == "NJU-WLAN") {
+                            showStatus("检测到已连接 NJU-WLAN，正在尝试自动认证…")
+                            autoLoginIfPossible()
+                        }
+                    }
+                }
+            }
     // 检查凭据是否有效
     private fun hasValidCredentials(): Boolean {
         val (user, pass) = Prefs.loadCredentials(this)
@@ -78,6 +94,17 @@ class MainActivity : AppCompatActivity() {
         btnLogin.setOnClickListener { doLogin(auto = false) }
 
         btnLogout.setOnClickListener { doLogout() }
+
+        // 注册 Wi-Fi 状态变化监听器
+        val filter = android.content.IntentFilter()
+        filter.addAction(android.net.wifi.WifiManager.NETWORK_STATE_CHANGED_ACTION)
+        filter.addAction(android.net.ConnectivityManager.CONNECTIVITY_ACTION)
+        registerReceiver(wifiStateReceiver, filter)
+    }
+    // 新增：注销 Wi-Fi 状态变化监听器，防止泄漏
+    override fun onDestroy() {
+        unregisterReceiver(wifiStateReceiver)
+        super.onDestroy()
     }
 
     override fun onResume() {
