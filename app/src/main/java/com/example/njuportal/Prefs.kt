@@ -15,20 +15,18 @@ object Prefs {
         val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
 
         return EncryptedSharedPreferences.create(
-            PREFS_NAME,
-            masterKeyAlias,
-            context,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        ) as EncryptedSharedPreferences
+                PREFS_NAME,
+                masterKeyAlias,
+                context,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        ) as
+                EncryptedSharedPreferences
     }
 
     fun saveCredentials(context: Context, username: String, password: String) {
         val sp = getSecurePrefs(context)
-        sp.edit()
-            .putString(KEY_USERNAME, username)
-            .putString(KEY_PASSWORD, password)
-            .apply()
+        sp.edit().putString(KEY_USERNAME, username).putString(KEY_PASSWORD, password).apply()
     }
 
     fun loadCredentials(context: Context): Pair<String?, String?> {
