@@ -60,7 +60,7 @@ class MainActivity : AppCompatActivity() {
         if (hasLocationPermission()) {
             val ssid = getCurrentSsid()
             if (ssid == "NJU-WLAN") {
-                txtStatus.text = "检测到已连接 NJU-WLAN，准备自动认证..."
+                txtStatus.text = "已连接 NJU-WLAN，正在尝试自动认证…"
                 autoLoginIfPossible()
             }
         }
@@ -103,8 +103,8 @@ class MainActivity : AppCompatActivity() {
             } else {
                 // 情况 ②：用户拒绝定位权限
                 txtStatus.text =
-                    "未授予位置权限，无法检测是否在 NJU-WLAN 下。\n" +
-                    "将尝试检测是否需要自动认证。"
+                    "已拒绝位置权限，无法自动检测 Wi-Fi。\n" +
+                    "正在检查是否需要自动认证…"
 
                 val (savedUser, savedPass) = Prefs.loadCredentials(this)
                 savedUser?.let { editUsername.setText(it) }
@@ -181,22 +181,22 @@ class MainActivity : AppCompatActivity() {
 
         when {
             ssid == "NJU-WLAN" -> {
-                txtStatus.text = "已连接 NJU-WLAN，准备自动认证..."
+                txtStatus.text = "已连接 NJU-WLAN，正在尝试自动认证…"
                 autoLoginIfPossible()
             }
 
             // 能读到 SSID 且不是 NJU-WLAN → 正常提示去切 Wi-Fi
             ssid != null -> {
                 txtStatus.text =
-                    "当前 Wi-Fi: $ssid。请连接 NJU-WLAN 后再返回本应用。"
+                    "当前 Wi-Fi：$ssid。\n请先连接 NJU-WLAN，再返回本应用。"
                 showWifiHintDialog()
             }
 
             // 情况 ①：有权限但拿不到 SSID（例如系统位置开关没开）
             else -> {
                 txtStatus.text =
-                    "无法检测当前 Wi-Fi 是否为 NJU-WLAN，" +
-                    "将尝试检测是否需要自动认证..."
+                    "无法读取当前 Wi-Fi（可能未开启系统位置），\n" +
+                    "正在检查是否需要自动认证…"
                 maybeAutoLoginWithoutWifiCheck()
             }
         }
@@ -210,7 +210,7 @@ class MainActivity : AppCompatActivity() {
         if (!user.isNullOrEmpty() && !pass.isNullOrEmpty()) {
             doLogin(auto = true)
         } else {
-            txtStatus.text = "已连接 NJU-WLAN，请输入用户名和密码后点击登录。"
+            txtStatus.text = "已连接 NJU-WLAN，请输入用户名和密码后点击“登录校园网”。"
         }
     }
 
@@ -219,76 +219,65 @@ class MainActivity : AppCompatActivity() {
     // ─────────────────────────────
     private fun enterManualConfirmMode(message: String? = null) {
         txtStatus.text = message ?: (
-            "无法自动检测网络状态。\n" +
-            "请确认已连接 NJU-WLAN 后，手动点击“登录校园网”或“退出登录”。"
+            "无法自动判断当前网络。\n" +
+            "请确认已连接 NJU-WLAN 后，再手动点击“登录校园网”或“退出登录”。"
         )
     }
 
     private fun checkInternetReachable(callback: (Boolean) -> Unit) {
         Thread {
-            var ok = false
-            try {
+            val reachable = try {
                 val client = OkHttpClient.Builder()
-                    .connectTimeout(3, TimeUnit.SECONDS)
-                    .readTimeout(3, TimeUnit.SECONDS)
+                    .connectTimeout(600, TimeUnit.MILLISECONDS)
+                    .readTimeout(400, TimeUnit.MILLISECONDS)
                     .build()
+
                 val request = Request.Builder()
-                    .url("https://gitee.com")
-                    .head()
+                    .url("https://www.gitee.com")
+                    .get()
                     .build()
-                val response = client.newCall(request).execute()
-                ok = response.isSuccessful
-                response.close()
-            } catch (_: Exception) {
-                ok = false
+
+                val resp = client.newCall(request).execute()
+                val ok = resp.isSuccessful
+                resp.close()
+                ok
+            } catch (e: Exception) {
+                false
             }
-            runOnUiThread { callback(ok) }
+
+            runOnUiThread {
+                callback(reachable)
+            }
         }.start()
     }
 
-    /**
-     * 情况 ① / ②：无法可靠检测当前是否为 NJU-WLAN 时调用：
-     * - 有保存的凭据 + 外网不可达 → 尝试自动登录一次
-     * - 其他情况 → 直接进入“用户确认 Wi-Fi 后手动登录/登出”的状态
-     */
+    // 情况 ① / ②：无法可靠检测当前是否为 NJU-WLAN 时调用：
     private fun maybeAutoLoginWithoutWifiCheck() {
         val (user, pass) = Prefs.loadCredentials(this)
 
-        // 没有保存凭据 → 直接让用户手动处理
-        if (user.isNullOrEmpty() || pass.isNullOrEmpty()) {
+        // 如果没有凭据 或 自动登录已经尝试过 → 无需自动处理
+        if (user.isNullOrEmpty() || pass.isNullOrEmpty() || autoLoginAlreadyTried) {
             enterManualConfirmMode(
-                "无法检测当前 Wi-Fi 是否为 NJU-WLAN。\n" +
-                "请确认已连接 NJU-WLAN 后，输入账号密码并点击“登录校园网”。"
+                "无法检测当前 Wi-Fi 状态。\n请确认已连接 NJU-WLAN 后，再进行登录或退出。"
             )
             return
         }
 
-        // 已经尝试过自动登录 → 不再重复自动登录
-        if (autoLoginAlreadyTried) {
-            enterManualConfirmMode(
-                "无法检测当前 Wi-Fi 是否为 NJU-WLAN。\n" +
-                "请确认已连接 NJU-WLAN 后，手动点击“登录校园网”或“退出登录”。"
-            )
-            return
-        }
-
+        // 标记已尝试
         autoLoginAlreadyTried = true
-        txtStatus.text = "正在检测网络连通性..."
+        txtStatus.text = "正在检测外网连通性…"
 
         checkInternetReachable { reachable ->
             if (reachable) {
-                // 外网本来就通，不需要自动登录
                 enterManualConfirmMode(
-                    "当前网络似乎已可访问外网，但无法确定是否在 NJU-WLAN。\n" +
+                    "当前网络已可访问外网，无需自动认证。\n" +
                     "如仍无法上网，请确认已连接 NJU-WLAN 后，再手动点击“登录校园网”。"
                 )
             } else {
-                // 外网不可达 → 尝试自动登录一次
-                txtStatus.text = "检测到外网不可用，尝试自动认证..."
+                txtStatus.text = "当前网络未连通，正在尝试自动认证…"
                 editUsername.setText(user)
                 editPassword.setText(pass)
                 doLogin(auto = true)
-                // 如果自动登录失败，doLogin 内部会给出“请确认 Wi-Fi 后手动登录”的提示
             }
         }
     }
@@ -303,9 +292,11 @@ class MainActivity : AppCompatActivity() {
         // 能确定 SSID 且不是 NJU-WLAN → 拦截
         if (canCheckWifi && ssid != "NJU-WLAN") {
             btnLogin.isEnabled = true
-            txtStatus.text = "当前 Wi-Fi：$ssid，非 NJU-WLAN，无法认证。请先连接校园网。"
+            txtStatus.text =
+                "当前 Wi-Fi：$ssid。\n" +
+                "未连接 NJU-WLAN，无法认证，请先切换到 NJU-WLAN。"
             if (!auto) {
-                Toast.makeText(this, "请先连接 NJU-WLAN 后再登录", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "请先连接 NJU-WLAN 后再登录。", Toast.LENGTH_LONG).show()
                 showWifiHintDialog()
             }
             return
@@ -314,20 +305,22 @@ class MainActivity : AppCompatActivity() {
         // 无法确定 SSID（情况 ① / ②）→ 提醒用户自己确认 Wi-Fi
         if (!canCheckWifi) {
             txtStatus.text =
-                "无法检测当前 Wi-Fi 是否为 NJU-WLAN。\n" +
-                "请确认已连接校园网后再登录。"
+                "无法获取当前 Wi-Fi 信息。\n" +
+                "请确认已连接到 NJU-WLAN 后再登录。"
         }
 
         val username = editUsername.text.toString().trim()
         val password = editPassword.text.toString().trim()
 
         if (username.isEmpty() || password.isEmpty()) {
-            if (!auto) Toast.makeText(this, "请输入用户名和密码", Toast.LENGTH_SHORT).show()
+            if (!auto) {
+                Toast.makeText(this, "请先输入用户名和密码。", Toast.LENGTH_SHORT).show()
+            }
             return
         }
 
         btnLogin.isEnabled = false
-        txtStatus.text = if (auto) "自动认证中..." else "正在认证..."
+        txtStatus.text = if (auto) "自动认证中…" else "正在认证…"
 
         PortalClient.login(username, password) { success, msg ->
             runOnUiThread {
@@ -349,7 +342,7 @@ class MainActivity : AppCompatActivity() {
                         // 自动登录失败 → 直接引导用户确认 Wi-Fi 后手动登录
                         txtStatus.text =
                             "自动认证失败：$msg\n\n" +
-                            "请确认已连接 NJU-WLAN，然后手动点击“登录校园网”。"
+                            "请确认已连接 NJU-WLAN 后，手动点击“登录校园网”。"
                     } else {
                         setCredentialsEditable(true)
                         Toast.makeText(this, "认证失败：$msg", Toast.LENGTH_LONG).show()
@@ -368,7 +361,9 @@ class MainActivity : AppCompatActivity() {
 
         // 能确定 SSID 且不是 NJU-WLAN → 不执行退出
         if (canCheckWifi && ssid != "NJU-WLAN") {
-            txtStatus.text = "当前 Wi-Fi：$ssid，非 NJU-WLAN，无法退出登录。"
+            txtStatus.text =
+                "当前 Wi-Fi：$ssid。\n" +
+                "未连接 NJU-WLAN，无法退出登录。"
             Toast.makeText(this, "请在 NJU-WLAN 下再执行退出登录。", Toast.LENGTH_SHORT).show()
             return
         }
@@ -376,18 +371,18 @@ class MainActivity : AppCompatActivity() {
         // 无法确定 SSID → 提醒用户自己确认 Wi-Fi，但继续尝试退出
         if (!canCheckWifi) {
             txtStatus.text =
-                "无法检测当前 Wi-Fi 是否为 NJU-WLAN，将直接尝试退出登录。\n" +
+                "无法获取当前 Wi-Fi，将直接尝试退出登录。\n" +
                 "请确认已连接 NJU-WLAN。"
         }
 
         val (savedUser, savedPass) = Prefs.loadCredentials(this)
         if (savedUser.isNullOrEmpty() || savedPass.isNullOrEmpty()) {
-            txtStatus.text = "未发现已保存的账号信息，无需退出。"
+            txtStatus.text = "未检测到已保存的账号信息，无需退出。"
             return
         }
 
         btnLogout.isEnabled = false
-        txtStatus.text = "正在退出登录..."
+        txtStatus.text = "正在退出登录…"
 
         PortalClient.logout { success, msg ->
             runOnUiThread {
@@ -402,8 +397,8 @@ class MainActivity : AppCompatActivity() {
                     btnLogin.isEnabled = true
                     autoLoginAlreadyTried = false
 
-                    txtStatus.text = "已退出登录并清除账号密码。"
-                    Toast.makeText(this, "已退出登录", Toast.LENGTH_SHORT).show()
+                    txtStatus.text = "已退出登录，并清除本地账号密码。"
+                    Toast.makeText(this, "已退出登录。", Toast.LENGTH_SHORT).show()
                 } else {
                     txtStatus.text = "退出登录失败：$msg"
                     Toast.makeText(this, "退出登录失败：$msg", Toast.LENGTH_LONG).show()
@@ -439,11 +434,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun showWifiHintDialog() {
         AlertDialog.Builder(this)
-            .setTitle("连接 NJU-WLAN")
+            .setTitle("前往连接 NJU-WLAN")
             .setMessage(
                 "当前未连接 NJU-WLAN。\n\n" +
-                "点击“去连接”将打开系统的 Wi-Fi 设置页面，请在其中选择并连接 NJU-WLAN，" +
-                "然后返回本应用继续认证。"
+                "点击“去连接”将打开系统的 Wi-Fi 设置页面，" +
+                "请在其中选择并连接 NJU-WLAN，连接成功后返回本应用。"
             )
             .setPositiveButton("去连接") { _, _ ->
                 openWifiPanel()

@@ -9,7 +9,7 @@
         android:id="@+id/txtTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="NJU 校园网一键认证"
+        android:text="NJU 校园网自动认证"
         android:textSize="22sp"
         android:textStyle="bold"
         android:layout_marginBottom="24dp" />
