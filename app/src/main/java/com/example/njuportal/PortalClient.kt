@@ -1,14 +1,14 @@
 package com.example.njuportal
 
+import java.io.IOException
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.Response
 import org.json.JSONObject
-import java.io.IOException
 
 object PortalClient {
 
@@ -20,7 +20,8 @@ object PortalClient {
     fun login(username: String, password: String, callback: (Boolean, String) -> Unit) {
         val url = "http://p2.nju.edu.cn/api/portal/v1/login"
 
-        val json = """
+        val json =
+                """
             {
               "domain": "default",
               "username": "$username",
@@ -30,27 +31,27 @@ object PortalClient {
 
         val body = json.toRequestBody("application/json; charset=utf-8".toMediaType())
 
-        val request = Request.Builder()
-            .url(url)
-            .post(body)
-            .build()
+        val request = Request.Builder().url(url).post(body).build()
 
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                callback(false, "网络错误：${e.message}")
-            }
+        client.newCall(request)
+                .enqueue(
+                        object : Callback {
+                            override fun onFailure(call: Call, e: IOException) {
+                                callback(false, "网络错误：${e.message}")
+                            }
 
-            override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    val text = it.body?.string().orEmpty()
+                            override fun onResponse(call: Call, response: Response) {
+                                response.use {
+                                    val text = it.body?.string().orEmpty()
 
-                    // 根据 NJU portal 的 JSON 返回判断成功/失败
-                    val (ok, msg) = parsePortalResponse(text)
+                                    // 根据 NJU portal 的 JSON 返回判断成功/失败
+                                    val (ok, msg) = parsePortalResponse(text)
 
-                    callback(ok, msg)
-                }
-            }
-        })
+                                    callback(ok, msg)
+                                }
+                            }
+                        }
+                )
     }
 
     // ===========================
@@ -60,36 +61,41 @@ object PortalClient {
         // 你原来用的接口，我先保留不动
         val url = "http://p2.nju.edu.cn/portal_io/logout"
 
-        val request = Request.Builder()
-            .url(url)
-            .get()
-            .build()
+        val request = Request.Builder().url(url).get().build()
 
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                callback(false, "网络错误：${e.message}")
-            }
+        client.newCall(request)
+                .enqueue(
+                        object : Callback {
+                            override fun onFailure(call: Call, e: IOException) {
+                                callback(false, "网络错误：${e.message}")
+                            }
 
-            override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    val text = it.body?.string().orEmpty()
-                    val result = try {
-                        val (ok, msg) = parsePortalResponse(text)
-                        ok to msg
-                    } catch (e: Exception) {
-                        val lower = text.lowercase()
-                        val ok = lower.contains("logout") || lower.contains("log out")
-                        if (ok) {
-                            true to "已退出登录"
-                        } else {
-                            false to if (text.isNotBlank()) text else "退出登录失败（未知返回）"
+                            override fun onResponse(call: Call, response: Response) {
+                                response.use {
+                                    val text = it.body?.string().orEmpty()
+                                    val result =
+                                            try {
+                                                val (ok, msg) = parsePortalResponse(text)
+                                                ok to msg
+                                            } catch (e: Exception) {
+                                                val lower = text.lowercase()
+                                                val ok =
+                                                        lower.contains("logout") ||
+                                                                lower.contains("log out")
+                                                if (ok) {
+                                                    true to "已退出登录"
+                                                } else {
+                                                    false to
+                                                            if (text.isNotBlank()) text
+                                                            else "退出登录失败（未知返回）"
+                                                }
+                                            }
+
+                                    callback(result.first, result.second)
+                                }
+                            }
                         }
-                    }
-
-                    callback(result.first, result.second)
-                }
-            }
-        })
+                )
     }
 
     private fun parsePortalResponse(resp: String): Pair<Boolean, String> {
@@ -113,11 +119,12 @@ object PortalClient {
                 val results = json.optJSONObject("results")
                 val detailMsg = results?.optString("io_reply_msg", "") ?: ""
 
-                val finalMsg = when {
-                    detailMsg.isNotBlank() -> detailMsg          // E012 未发现此用户 / E010 密码无效 等
-                    replyMsg.isNotBlank() -> replyMsg            // 登录失败 / 其它错误
-                    else -> resp                                 // 兜底：原始返回串
-                }
+                val finalMsg =
+                        when {
+                            detailMsg.isNotBlank() -> detailMsg // E012 未发现此用户 / E010 密码无效 等
+                            replyMsg.isNotBlank() -> replyMsg // 登录失败 / 其它错误
+                            else -> resp // 兜底：原始返回串
+                        }
 
                 false to finalMsg
             }
