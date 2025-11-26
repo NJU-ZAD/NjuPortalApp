@@ -1,0 +1,39 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 缩小为 75%，并向右 14 / 向下 30（本次关键：下移更多） -->
+    <group
+        android:scaleX="0.75"
+        android:scaleY="0.75"
+        android:translateX="14"
+        android:translateY="30">
+
+        <!-- N -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M0,60 L0,0 L14,0 L36,40 L36,0 L50,0 L50,60 L36,60 L14,20 L14,60 Z" />
+
+        <!-- J -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M62,0 L76,0 L76,42
+                              A18,18 0 0 1 58,60
+                              L44,60 L44,46 L58,46
+                              A4,4 0 0 0 62,42 Z" />
+
+        <!-- U -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M88,0 L102,0 L102,40
+                              A20,20 0 0 1 82,60
+                              A20,20 0 0 1 62,40
+                              L62,0 L76,0 L76,40
+                              A6,6 0 0 0 82,46
+                              A6,6 0 0 0 88,40 Z" />
+
+    </group>
+
+</vector>

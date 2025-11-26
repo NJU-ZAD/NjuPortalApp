@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">NJU Portal</string>
+    <string name="login">登录校园网</string>
+    <string name="username">用户名</string>
+    <string name="password">密码</string>
+    <string name="auto_login_success">自动认证成功，可以上网了</string>
+    <string name="login_success">认证成功，可以上网了</string>
+    <string name="login_failed">认证失败</string>
+    <string name="status_wait">状态：等待操作</string>
+</resources>

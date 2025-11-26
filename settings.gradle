@@ -1,0 +1,2 @@
+rootProject.name = "NjuPortalApp"
+include ':app'

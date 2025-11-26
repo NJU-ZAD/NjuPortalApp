@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/txtTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="NJU 校园网一键认证"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp" />
+
+    <EditText
+        android:id="@+id/editUsername"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="用户名"
+        android:layout_marginBottom="12dp" />
+
+    <EditText
+        android:id="@+id/editPassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textPassword"
+        android:hint="密码"
+        android:layout_marginBottom="20dp" />
+
+    <Button
+        android:id="@+id/btnLogin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="登录校园网"
+        android:layout_marginBottom="20dp" />
+
+    <Button
+        android:id="@+id/btnLogout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="退出登录"
+        android:layout_marginTop="8dp" />
+
+    <TextView
+        android:id="@+id/txtStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="状态：等待操作"
+        android:textSize="14sp"
+        android:layout_marginTop="16dp" />
+
+    <!-- ⭐ 新增：底部 GitHub 链接 ⭐ -->
+    <TextView
+        android:id="@+id/txtGithub"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="https://github.com/NJU-ZAD/NjuPortalApp"
+        android:textSize="12sp"
+        android:textColor="#2196F3"
+        android:gravity="center"
+        android:layout_marginTop="40dp"
+        android:autoLink="web"
+        android:linksClickable="true" />
+
+</LinearLayout>
