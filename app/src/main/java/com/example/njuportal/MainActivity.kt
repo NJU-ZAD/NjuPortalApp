@@ -20,6 +20,16 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 class MainActivity : AppCompatActivity() {
+    // 检查数据流量是否开启（移动网络是否连接）
+    private fun isMobileDataEnabled(): Boolean {
+        val cm =
+                getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+                        ?: return false
+        val activeNetwork = cm.activeNetworkInfo
+        return activeNetwork != null &&
+                activeNetwork.type == android.net.ConnectivityManager.TYPE_MOBILE &&
+                activeNetwork.isConnected
+    }
     // 新增：Wi-Fi状态变化监听器
     private val wifiStateReceiver =
             object : android.content.BroadcastReceiver() {
@@ -323,6 +333,14 @@ class MainActivity : AppCompatActivity() {
     private fun doLogin(auto: Boolean) {
         val ssid = getCurrentSsid()
         val canCheckWifi = hasLocationPermission() && ssid != null
+
+        // 只有在用户名和密码未保存时，强制检测数据流量
+        if (!hasValidCredentials() && isMobileDataEnabled()) {
+            btnLogin.isEnabled = false
+            showStatus("检测到数据流量已开启，请关闭数据流量后再登录校园网。")
+            Toast.makeText(this, "请关闭数据流量，否则认证可能失败。", Toast.LENGTH_LONG).show()
+            return
+        }
 
         // 能确定 SSID 且不是 NJU-WLAN → 拦截
         if (canCheckWifi && ssid != "NJU-WLAN") {
