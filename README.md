@@ -2,7 +2,7 @@
 
 ## User
 
-* Download apk https://github.com/NJU-ZAD/NjuPortalApp/releases/tag/latest
+* Download apk https://github.com/NJU-ZAD/NjuPortalApp/releases
 * Location service is required to allow automatic Wi-Fi detection.
 
 ## Developer
